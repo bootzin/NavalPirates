@@ -217,12 +217,25 @@ public class ShipControl : NetworkBehaviour
 	public void Respawn()
 	{
 		Health.Value = initialHealth;
-		transform.position = Random.insideUnitCircle * 2f;
+		transform.position = SelectRandomSpawn() + ((Vector3)Random.insideUnitCircle * 2f);
+		var rot = transform.rotation;
+		var eul = rot.eulerAngles;
+		eul.z = Random.Range(0, 360);
+		rot.eulerAngles = eul;
+		transform.rotation = rot;
 		GetComponent<Rigidbody2D>().velocity = Vector3.zero;
 		GetComponent<Rigidbody2D>().angularVelocity = 0;
 		GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
 		destroyed = false;
 		gameOver = false;
+	}
+
+	private Vector3 SelectRandomSpawn()
+	{
+		var spawnPoints = GameObject.Find("SpawnPoints");
+		var spawns = spawnPoints.GetComponentsInChildren<Transform>();
+		var index = Random.Range(0, spawns.Length);
+		return spawns[index].position;
 	}
 
 	void OnCollisionEnter2D(Collision2D other)

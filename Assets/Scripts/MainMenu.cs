@@ -1,6 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
@@ -17,9 +14,11 @@ public class MainMenu : MonoBehaviour
 	[SerializeField] private GameObject aiPrefab;
 	[SerializeField] private TMP_InputField ipToConnect;
 	[SerializeField] private TMP_InputField portToConnect;
+	[SerializeField] private GameObject spawnPoints;
 
 	private string activeMenu = "Start";
 	private bool hosting;
+	private const int NUMBER_ENEMIES = 12;
 
 	#region Start Menu
 	public void SinglePlayer()
@@ -28,6 +27,25 @@ public class MainMenu : MonoBehaviour
 		NetworkManager.Singleton.StartHost();
 		AIManager.Instance.Init();
 		objectPool.GetNetworkObject(aiPrefab).Spawn(true);
+
+		for (int amount = 0; amount < NUMBER_ENEMIES; amount++)
+		{
+			var ai = objectPool.GetNetworkObject(aiPrefab);
+			ai.transform.position = GetRandomSpawnPoint() + ((Vector3)Random.insideUnitCircle * 2f);
+			var rot = ai.transform.rotation;
+			var eul = rot.eulerAngles;
+			eul.z = Random.Range(0, 360);
+			rot.eulerAngles = eul;
+			ai.transform.rotation = rot;
+			ai.Spawn(true);
+		}
+	}
+
+	private Vector3 GetRandomSpawnPoint()
+	{
+		var spawns = spawnPoints.GetComponentsInChildren<Transform>();
+		var index = Random.Range(0, spawns.Length);
+		return spawns[index].position;
 	}
 
 	public void Multiplayer()

@@ -18,11 +18,8 @@ public class GameOverScreen : NetworkBehaviour
 
 	public void SetPlayer(ShipControl player)
 	{
-		if (IsServer)
-		{
-			gameObject.SetActive(true);
-			playerToRespawn = player;
-		}
+		gameObject.SetActive(true);
+		playerToRespawn = player;
 	}
 
 	public void RespawnPlayer()
