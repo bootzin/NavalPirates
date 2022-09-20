@@ -5201,6 +5201,7 @@ MonoBehaviour:
   deadShipPrefab: {fileID: 5368794274902451522, guid: e4e053662e3515d4fae618bfd1d7a9d4, type: 3}
   fireSound: {fileID: 2287246981597937591}
   hitSound: {fileID: -4689929824877949651}
+  healthySprite: {fileID: 21300000, guid: 42a9abfbe421f114aba1a2f85faca310, type: 3}
   damageSprite: {fileID: 21300000, guid: 7ec5565c84da536488692b83897fdcf3, type: 3}
   heavyDamageSprite: {fileID: 21300000, guid: 16ffbc5ca318c114ba3db206c2244c4b, type: 3}
   Health:

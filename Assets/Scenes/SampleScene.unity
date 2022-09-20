@@ -3697,8 +3697,6 @@ MonoBehaviour:
     PrewarmCount: 0
   - Prefab: {fileID: 5368794274902451522, guid: e4e053662e3515d4fae618bfd1d7a9d4, type: 3}
     PrewarmCount: 12
-  - Prefab: {fileID: 7372227909667797943, guid: 3ee8ff55a2cc85a4aade6038ecb0556d, type: 3}
-    PrewarmCount: 4
 --- !u!1 &576941255
 GameObject:
   m_ObjectHideFlags: 0
@@ -19774,11 +19772,6 @@ MonoBehaviour:
       OverridingTargetPrefab: {fileID: 0}
     - Override: 0
       Prefab: {fileID: 2208103680794971710, guid: a5c2826f1d539fe429fd0d872785ba64, type: 3}
-      SourcePrefabToOverride: {fileID: 0}
-      SourceHashToOverride: 0
-      OverridingTargetPrefab: {fileID: 0}
-    - Override: 0
-      Prefab: {fileID: 7372227909667797943, guid: 3ee8ff55a2cc85a4aade6038ecb0556d, type: 3}
       SourcePrefabToOverride: {fileID: 0}
       SourceHashToOverride: 0
       OverridingTargetPrefab: {fileID: 0}

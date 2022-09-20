@@ -22,6 +22,7 @@ public class AIShipControl : NetworkBehaviour
 	[SerializeField] private GameObject deadShipPrefab;
 	[SerializeField] private AudioSource fireSound;
 	[SerializeField] private AudioSource hitSound;
+	[SerializeField] private Sprite healthySprite;
 	[SerializeField] private Sprite damageSprite;
 	[SerializeField] private Sprite heavyDamageSprite;
 
@@ -36,6 +37,7 @@ public class AIShipControl : NetworkBehaviour
 	[SerializeField] Vector2 m_ResourceBarsOffset;
 	private Vector3? targetPosition = null;
 	private bool reverse;
+	private bool destroyed;
 
 	private void Awake()
 	{
@@ -54,7 +56,7 @@ public class AIShipControl : NetworkBehaviour
 			{
 				case ShipType.Basic:
 				default:
-					rotateSpeed = 2f;
+					rotateSpeed = 2.2f;
 					acceleration = 80f;
 					bulletDamage = 5;
 					bulletSize = 1f;
@@ -131,6 +133,9 @@ public class AIShipControl : NetworkBehaviour
 				}
 			}
 		}
+
+		if (destroyed)
+			Respawn();
 	}
 
 	private void Fire(Vector3 direction)
@@ -173,8 +178,31 @@ public class AIShipControl : NetworkBehaviour
 
 			deadShip.Spawn(true);
 
-			NetworkObject.Despawn(true);
+			destroyed = true;
 		}
+	}
+
+	private void Respawn()
+	{
+		Health.Value = initialHealth;
+		transform.position = SelectRandomSpawn() + ((Vector3)Random.insideUnitCircle * 2f);
+		var rot = transform.rotation;
+		var eul = rot.eulerAngles;
+		eul.z = Random.Range(0, 360);
+		rot.eulerAngles = eul;
+		transform.rotation = rot;
+		GetComponent<Rigidbody2D>().velocity = Vector3.zero;
+		GetComponent<Rigidbody2D>().angularVelocity = 0;
+		GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
+		destroyed = false;
+	}
+
+	private Vector3 SelectRandomSpawn()
+	{
+		var spawnPoints = GameObject.Find("SpawnPoints");
+		var spawns = spawnPoints.GetComponentsInChildren<Transform>();
+		var index = Random.Range(0, spawns.Length);
+		return spawns[index].position;
 	}
 
 	void OnCollisionEnter2D(Collision2D other)

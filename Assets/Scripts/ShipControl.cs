@@ -31,6 +31,8 @@ public class ShipControl : NetworkBehaviour
 	[SerializeField] private Sprite damageSprite;
 	[SerializeField] private Sprite heavyDamageSprite;
 
+	public int Score { get; set; } = 0;
+
 	public readonly NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
 	public NetworkVariable<float> Health = new NetworkVariable<float>();
 	public readonly NetworkVariable<float> ShootCooldown = new NetworkVariable<float>();
@@ -134,11 +136,21 @@ public class ShipControl : NetworkBehaviour
 			return;
 
 		if (Input.GetKeyDown(KeyCode.G))
+			TakeDamageServerRpc(40);
+
+		if (Health.Value <= 0 && !destroyed)
 			destroyed = true;
+
+		if (destroyed && Health.Value != 0)
+			destroyed = false;
+
+		if (gameOver && Health.Value != 0)
+			gameOver = false;
 
 		if (destroyed && !gameOver)
 		{
 			ShowGameOverScreen();
+			gameOver = true;
 			return;
 		}
 
@@ -158,6 +170,12 @@ public class ShipControl : NetworkBehaviour
 		{
 			FireServerRpc();
 		}
+	}
+
+	[ServerRpc]
+	private void TakeDamageServerRpc(int v)
+	{
+		TakeDamage(v);
 	}
 
 	private void Fire(Vector3 direction)
@@ -188,46 +206,43 @@ public class ShipControl : NetworkBehaviour
 		if (Health.Value < initialHealth / 3)
 			GetComponentInChildren<SpriteRenderer>().sprite = heavyDamageSprite;
 
-		if (Health.Value <= 0 && IsServer && !destroyed)
+		if (Health.Value <= 0 && !destroyed)
 		{
 			Health.Value = 0;
-
-			var deadShip = objectPool.GetNetworkObject(deadShipPrefab);
-			deadShip.transform.position = transform.position;
-			deadShip.transform.rotation = transform.rotation;
-
-			var deadShipRb = deadShip.GetComponent<Rigidbody2D>();
-			deadShipRb.velocity = rb2D.velocity;
-			deadShipRb.angularVelocity = rb2D.angularVelocity;
-
-			deadShip.Spawn(true);
-
-			destroyed = true;
+			SpawnDeadShipServerRpc();
 		}
 	}
 
 	private void ShowGameOverScreen()
 	{
-		var gameOverScreen = objectPool.GetNetworkObject(gameOverScreenPrefab).gameObject;
+		var gameOverScreen = Instantiate(gameOverScreenPrefab);
 		gameOverScreen.GetComponent<GameOverScreen>().SetPlayer(this);
-		gameOverScreen.GetComponent<NetworkObject>().Spawn(true);
-		gameOver = true;
+		gameObject.SetActive(false);
+		SetActiveServerRpc(false);
 	}
 
 	public void Respawn()
 	{
-		Health.Value = initialHealth;
-		transform.position = SelectRandomSpawn() + ((Vector3)Random.insideUnitCircle * 2f);
-		var rot = transform.rotation;
-		var eul = rot.eulerAngles;
-		eul.z = Random.Range(0, 360);
-		rot.eulerAngles = eul;
-		transform.rotation = rot;
+		Score = 0;
 		GetComponent<Rigidbody2D>().velocity = Vector3.zero;
 		GetComponent<Rigidbody2D>().angularVelocity = 0;
 		GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
-		destroyed = false;
-		gameOver = false;
+		gameObject.SetActive(true);
+		SetActiveServerRpc(true);
+		RequestRespawnServerRpc();
+	}
+
+	[ServerRpc]
+	private void SetActiveServerRpc(bool value)
+	{
+		gameObject.SetActive(value);
+		SetActiveClientRpc(value);
+	}
+
+	[ClientRpc]
+	private void SetActiveClientRpc(bool value)
+	{
+		gameObject.SetActive(value);
 	}
 
 	private Vector3 SelectRandomSpawn()
@@ -254,6 +269,31 @@ public class ShipControl : NetworkBehaviour
 	public void ChangeShipType(ShipType type) => shipType = type;
 
 	#region Server Rpc
+	[ServerRpc]
+	private void RequestRespawnServerRpc()
+	{
+		Health.Value = initialHealth;
+		transform.position = SelectRandomSpawn() + ((Vector3)Random.insideUnitCircle * 2f);
+		var rot = transform.rotation;
+		var eul = rot.eulerAngles;
+		eul.z = Random.Range(0, 360);
+		rot.eulerAngles = eul;
+		transform.rotation = rot;
+	}
+
+	[ServerRpc(RequireOwnership = false)]
+	private void SpawnDeadShipServerRpc()
+	{
+		var deadShip = objectPool.GetNetworkObject(deadShipPrefab);
+		deadShip.transform.position = transform.position;
+		deadShip.transform.rotation = transform.rotation;
+
+		var deadShipRb = deadShip.GetComponent<Rigidbody2D>();
+		deadShipRb.velocity = rb2D.velocity;
+		deadShipRb.angularVelocity = rb2D.angularVelocity;
+
+		deadShip.Spawn(true);
+	}
 
 	[ServerRpc]
 	public void ThrustServerRpc(float thrust, int spin)

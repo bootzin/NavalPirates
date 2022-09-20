@@ -18,7 +18,7 @@ public class MainMenu : MonoBehaviour
 
 	private string activeMenu = "Start";
 	private bool hosting;
-	private const int NUMBER_ENEMIES = 12;
+	private const int NUMBER_ENEMIES = 4;
 
 	#region Start Menu
 	public void SinglePlayer()

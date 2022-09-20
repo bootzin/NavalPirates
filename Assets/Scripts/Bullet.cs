@@ -36,7 +36,7 @@ public class Bullet : NetworkBehaviour
 
 	public void Setup(AIShipControl owner, int damage = 5, float size = 1)
 	{
-		this.AIOwner = owner;
+		AIOwner = owner;
 		SetupInternal(damage, size);
 	}
 
@@ -82,6 +82,8 @@ public class Bullet : NetworkBehaviour
 			{
 				aiShipControl.TakeDamage(damage, true);
 				DestroyBullet();
+				if (owner != null && aiShipControl.Health.Value <= 0)
+					owner.Score += 1;
 			}
 		}
 
@@ -91,6 +93,8 @@ public class Bullet : NetworkBehaviour
 			{
 				shipControl.TakeDamage(damage, true);
 				DestroyBullet();
+				if (owner != null && shipControl.Health.Value <= 0)
+					owner.Score += 1;
 			}
 		}
 	}
