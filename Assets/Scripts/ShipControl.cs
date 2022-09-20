@@ -21,6 +21,8 @@ public class ShipControl : NetworkBehaviour
 	private int bulletDamage;
 	private float bulletSize;
 	private bool canShoot;
+	private bool destroyed;
+	private bool gameOver;
 
 	[SerializeField] private GameObject gameOverScreenPrefab;
 	[SerializeField] private GameObject bulletPrefab;
@@ -31,19 +33,17 @@ public class ShipControl : NetworkBehaviour
 	[SerializeField] private Sprite damageSprite;
 	[SerializeField] private Sprite heavyDamageSprite;
 
-	public int Score { get; set; } = 0;
 
 	public readonly NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
 	public NetworkVariable<float> Health = new NetworkVariable<float>();
 	public readonly NetworkVariable<float> ShootCooldown = new NetworkVariable<float>();
+	public readonly NetworkVariable<int> Score = new NetworkVariable<int>();
 	public NetworkVariable<FixedString32Bytes> PlayerName = new NetworkVariable<FixedString32Bytes>(new FixedString32Bytes(""));
 
 	// gui
 	[SerializeField] Texture m_Box;
 	[SerializeField] Vector2 m_NameLabelOffset;
 	[SerializeField] Vector2 m_ResourceBarsOffset;
-	private bool destroyed;
-	private bool gameOver;
 
 	//camera
 	private const float MAX_X = 26.4f;
@@ -135,8 +135,12 @@ public class ShipControl : NetworkBehaviour
 		if (!IsLocalPlayer)
 			return;
 
-		if (Input.GetKeyDown(KeyCode.G))
-			TakeDamageServerRpc(40);
+		//cheats
+		//if (Input.GetKeyDown(KeyCode.G))
+		//	TakeDamageServerRpc(40);
+
+		//if (Input.GetKeyDown(KeyCode.F))
+		//	FireServerRpc(100);
 
 		if (Health.Value <= 0 && !destroyed)
 			destroyed = true;
@@ -154,6 +158,22 @@ public class ShipControl : NetworkBehaviour
 			return;
 		}
 
+		if (Health.Value < initialHealth * 2 / 3)
+		{
+			GetComponentInChildren<SpriteRenderer>().sprite = damageSprite;
+			UpdateDamageSpriteServerRpc();
+		}
+		else if (Health.Value < initialHealth / 3)
+		{
+			GetComponentInChildren<SpriteRenderer>().sprite = heavyDamageSprite;
+			UpdateHeavyDamageSpriteServerRpc();
+		}
+		else
+		{
+			GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
+			UpdateHealthySpriteServerRpc();
+		}
+
 		// movement
 		int spin = -(int)Mathf.Round(Input.GetAxisRaw("Horizontal"));
 		int moveForce = (int)Mathf.Round(Input.GetAxisRaw("Vertical"));
@@ -168,7 +188,7 @@ public class ShipControl : NetworkBehaviour
 		// fire
 		if (Input.GetKeyDown(KeyCode.Space))
 		{
-			FireServerRpc();
+			FireServerRpc(bulletDamage);
 		}
 	}
 
@@ -178,7 +198,7 @@ public class ShipControl : NetworkBehaviour
 		TakeDamage(v);
 	}
 
-	private void Fire(Vector3 direction)
+	private void Fire(Vector3 direction, int damage)
 	{
 		fireSound.Play();
 
@@ -189,7 +209,7 @@ public class ShipControl : NetworkBehaviour
 		var velocity = rb2D.velocity;
 		velocity += (Vector2)(direction) * 10;
 		bulletRb.velocity = velocity;
-		bullet.GetComponent<Bullet>().Setup(this, bulletDamage, bulletSize);
+		bullet.GetComponent<Bullet>().Setup(this, damage, bulletSize);
 		bullet.GetComponent<NetworkObject>().Spawn(true);
 	}
 
@@ -200,17 +220,50 @@ public class ShipControl : NetworkBehaviour
 		if (playSound)
 			hitSound.Play();
 
-		if (Health.Value < initialHealth * 2 / 3)
-			GetComponentInChildren<SpriteRenderer>().sprite = damageSprite;
-
-		if (Health.Value < initialHealth / 3)
-			GetComponentInChildren<SpriteRenderer>().sprite = heavyDamageSprite;
-
 		if (Health.Value <= 0 && !destroyed)
 		{
 			Health.Value = 0;
 			SpawnDeadShipServerRpc();
 		}
+	}
+
+	[ServerRpc]
+	private void UpdateHeavyDamageSpriteServerRpc()
+	{
+		GetComponentInChildren<SpriteRenderer>().sprite = heavyDamageSprite;
+		UpdateHeavyDamageSpriteClientRpc();
+	}
+
+	[ClientRpc]
+	private void UpdateHeavyDamageSpriteClientRpc()
+	{
+		GetComponentInChildren<SpriteRenderer>().sprite = heavyDamageSprite;
+	}
+
+	[ServerRpc]
+	private void UpdateDamageSpriteServerRpc()
+	{
+		GetComponentInChildren<SpriteRenderer>().sprite = damageSprite;
+		UpdateDamageSpriteClientRpc();
+	}
+
+	[ClientRpc]
+	private void UpdateDamageSpriteClientRpc()
+	{
+		GetComponentInChildren<SpriteRenderer>().sprite = damageSprite;
+	}
+
+	[ServerRpc]
+	private void UpdateHealthySpriteServerRpc()
+	{
+		GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
+		UpdateHealthySpriteClientRpc();
+	}
+
+	[ClientRpc]
+	private void UpdateHealthySpriteClientRpc()
+	{
+		GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
 	}
 
 	private void ShowGameOverScreen()
@@ -223,10 +276,8 @@ public class ShipControl : NetworkBehaviour
 
 	public void Respawn()
 	{
-		Score = 0;
 		GetComponent<Rigidbody2D>().velocity = Vector3.zero;
 		GetComponent<Rigidbody2D>().angularVelocity = 0;
-		GetComponentInChildren<SpriteRenderer>().sprite = healthySprite;
 		gameObject.SetActive(true);
 		SetActiveServerRpc(true);
 		RequestRespawnServerRpc();
@@ -268,11 +319,11 @@ public class ShipControl : NetworkBehaviour
 
 	public void ChangeShipType(ShipType type) => shipType = type;
 
-	#region Server Rpc
 	[ServerRpc]
 	private void RequestRespawnServerRpc()
 	{
 		Health.Value = initialHealth;
+		Score.Value = 0;
 		transform.position = SelectRandomSpawn() + ((Vector3)Random.insideUnitCircle * 2f);
 		var rot = transform.rotation;
 		var eul = rot.eulerAngles;
@@ -303,11 +354,11 @@ public class ShipControl : NetworkBehaviour
 	}
 
 	[ServerRpc]
-	public void FireServerRpc()
+	public void FireServerRpc(int damage)
 	{
 		if (canShoot)
 		{
-			Fire(transform.right);
+			Fire(transform.right, damage);
 
 			canShoot = false;
 			ShootCooldown.Value = NetworkManager.ServerTime.TimeAsFloat + shootInterval;
@@ -319,8 +370,6 @@ public class ShipControl : NetworkBehaviour
 	{
 		PlayerName.Value = name;
 	}
-
-	#endregion // Server Rpc
 
 	void OnGUI()
 	{

@@ -83,7 +83,7 @@ public class Bullet : NetworkBehaviour
 				aiShipControl.TakeDamage(damage, true);
 				DestroyBullet();
 				if (owner != null && aiShipControl.Health.Value <= 0)
-					owner.Score += 1;
+					owner.Score.Value += 1;
 			}
 		}
 
@@ -94,7 +94,7 @@ public class Bullet : NetworkBehaviour
 				shipControl.TakeDamage(damage, true);
 				DestroyBullet();
 				if (owner != null && shipControl.Health.Value <= 0)
-					owner.Score += 1;
+					owner.Score.Value += 1;
 			}
 		}
 	}
