@@ -13,7 +13,7 @@ WSAD - Move Ship
 Spacebar - Shoot up front
 
 # Installation
-Simply unzip the files and play the game!
+Download the files from the itch page or the releases, unzip them and play the game!
 
 # Images
 <p float="left">
